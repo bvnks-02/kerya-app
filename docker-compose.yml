@@ -1,0 +1,347 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: kerya_postgres
+    environment:
+      POSTGRES_DB: kerya_db
+      POSTGRES_USER: kerya_user
+      POSTGRES_PASSWORD: kerya_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - kerya_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kerya_user -d kerya_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: kerya_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - kerya_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: kerya_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - kerya_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # RabbitMQ Message Queue
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: kerya_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - kerya_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API Gateway
+  api_gateway:
+    build:
+      context: ./api_gateway
+      dockerfile: Dockerfile
+    container_name: kerya_api_gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://kerya_user:kerya_password@postgres:5432/kerya_db
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - USER_SERVICE_URL=http://user_service:8001
+      - PROPERTY_SERVICE_URL=http://property_service:8002
+      - BOOKING_SERVICE_URL=http://booking_service:8003
+      - NOTIFICATION_SERVICE_URL=http://notification_service:8004
+      - REVIEW_SERVICE_URL=http://review_service:8005
+      - POST_SERVICE_URL=http://post_service:8006
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - kerya_network
+    volumes:
+      - ./logs:/app/logs
+
+  # User Service
+  user_service:
+    build:
+      context: ./user_service
+      dockerfile: Dockerfile
+    container_name: kerya_user_service
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=postgresql://kerya_user:kerya_password@postgres:5432/kerya_db
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - kerya_network
+    volumes:
+      - ./logs:/app/logs
+
+  # Property Service
+  property_service:
+    build:
+      context: ./property_service
+      dockerfile: Dockerfile
+    container_name: kerya_property_service
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=postgresql://kerya_user:kerya_password@postgres:5432/kerya_db
+      - REDIS_URL=redis://redis:6379/0
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - kerya_network
+    volumes:
+      - ./logs:/app/logs
+
+  # Booking Service
+  booking_service:
+    build:
+      context: ./booking_service
+      dockerfile: Dockerfile
+    container_name: kerya_booking_service
+    ports:
+      - "8003:8003"
+    environment:
+      - DATABASE_URL=postgresql://kerya_user:kerya_password@postgres:5432/kerya_db
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - kerya_network
+    volumes:
+      - ./logs:/app/logs
+
+  # Notification Service
+  notification_service:
+    build:
+      context: ./notification_service
+      dockerfile: Dockerfile
+    container_name: kerya_notification_service
+    ports:
+      - "8004:8004"
+    environment:
+      - DATABASE_URL=postgresql://kerya_user:kerya_password@postgres:5432/kerya_db
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - kerya_network
+    volumes:
+      - ./logs:/app/logs
+
+  # Review Service
+  review_service:
+    build:
+      context: ./review_service
+      dockerfile: Dockerfile
+    container_name: kerya_review_service
+    ports:
+      - "8005:8005"
+    environment:
+      - DATABASE_URL=postgresql://kerya_user:kerya_password@postgres:5432/kerya_db
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - kerya_network
+    volumes:
+      - ./logs:/app/logs
+
+  # Post Service
+  post_service:
+    build:
+      context: ./post_service
+      dockerfile: Dockerfile
+    container_name: kerya_post_service
+    ports:
+      - "8006:8006"
+    environment:
+      - DATABASE_URL=postgresql://kerya_user:kerya_password@postgres:5432/kerya_db
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - kerya_network
+    volumes:
+      - ./logs:/app/logs
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: kerya_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - kerya_network
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: kerya_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - kerya_network
+    depends_on:
+      - prometheus
+
+  # Jaeger Tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: kerya_jaeger
+    ports:
+      - "16686:16686"
+      - "6831:6831/udp"
+      - "14268:14268"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - kerya_network
+
+  # Kibana (ELK Stack)
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: kerya_kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    networks:
+      - kerya_network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  # Nginx Reverse Proxy (Optional)
+  nginx:
+    image: nginx:alpine
+    container_name: kerya_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    networks:
+      - kerya_network
+    depends_on:
+      - api_gateway
+
+volumes:
+  postgres_data:
+  redis_data:
+  elasticsearch_data:
+  rabbitmq_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  kerya_network:
+    driver: bridge 

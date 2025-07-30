@@ -1,0 +1,115 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kerya-config
+  namespace: kerya-app
+data:
+  # Application Settings
+  APP_NAME: "Kerya App"
+  APP_VERSION: "1.0.0"
+  ENVIRONMENT: "production"
+  DEBUG: "false"
+  
+  # Database Configuration
+  DATABASE_URL: "postgresql://kerya_user:kerya_password@kerya-postgres:5432/kerya_db"
+  DATABASE_POOL_SIZE: "20"
+  DATABASE_MAX_OVERFLOW: "30"
+  DATABASE_POOL_TIMEOUT: "30"
+  
+  # Redis Configuration
+  REDIS_URL: "redis://kerya-redis:6379/0"
+  REDIS_DB: "0"
+  REDIS_MAX_CONNECTIONS: "20"
+  
+  # Elasticsearch Configuration
+  ELASTICSEARCH_URL: "http://kerya-elasticsearch:9200"
+  ELASTICSEARCH_USERNAME: "elastic"
+  ELASTICSEARCH_PASSWORD: "changeme"
+  ELASTICSEARCH_INDEX_PREFIX: "kerya"
+  
+  # RabbitMQ Configuration
+  RABBITMQ_URL: "amqp://guest:guest@kerya-rabbitmq:5672/"
+  RABBITMQ_HOST: "kerya-rabbitmq"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USER: "guest"
+  RABBITMQ_PASSWORD: "guest"
+  RABBITMQ_VHOST: "/"
+  
+  # JWT Configuration
+  JWT_ALGORITHM: "HS256"
+  JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+  JWT_REFRESH_TOKEN_EXPIRE_DAYS: "7"
+  
+  # Security Configuration
+  CORS_ORIGINS: "https://kerya.com,https://www.kerya.com,https://app.kerya.com"
+  ALLOWED_HOSTS: "kerya.com,www.kerya.com,app.kerya.com"
+  
+  # Rate Limiting
+  RATE_LIMIT_REQUESTS: "100"
+  RATE_LIMIT_WINDOW: "60"
+  
+  # File Upload Configuration
+  MAX_FILE_SIZE: "10485760"
+  ALLOWED_FILE_TYPES: "image/jpeg,image/png,image/webp"
+  UPLOAD_DIR: "/app/uploads"
+  
+  # Logging Configuration
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  LOG_FILE: "/app/logs/kerya.log"
+  
+  # Monitoring Configuration
+  PROMETHEUS_ENABLED: "true"
+  PROMETHEUS_PORT: "9090"
+  JAEGER_ENABLED: "true"
+  JAEGER_HOST: "kerya-jaeger"
+  JAEGER_PORT: "6831"
+  
+  # Service URLs
+  USER_SERVICE_URL: "http://kerya-user-service:8001"
+  PROPERTY_SERVICE_URL: "http://kerya-property-service:8002"
+  BOOKING_SERVICE_URL: "http://kerya-booking-service:8003"
+  NOTIFICATION_SERVICE_URL: "http://kerya-notification-service:8004"
+  REVIEW_SERVICE_URL: "http://kerya-review-service:8005"
+  POST_SERVICE_URL: "http://kerya-post-service:8006"
+  
+  # Points System Configuration
+  POINTS_REGISTRATION_BONUS: "100"
+  POINTS_BOOKING_EARN: "50"
+  POINTS_REVIEW_EARN: "25"
+  POINTS_POST_COST: "10"
+  
+  # Business Logic Configuration
+  MAX_BOOKING_DAYS: "30"
+  MIN_BOOKING_NOTICE_HOURS: "2"
+  CANCELLATION_POLICY_HOURS: "24"
+  REVIEW_DAYS_LIMIT: "14"
+  
+  # Cache Configuration
+  CACHE_TTL: "300"
+  SESSION_TTL: "3600"
+  PROPERTY_CACHE_TTL: "600"
+  
+  # Notification Configuration
+  EMAIL_NOTIFICATIONS_ENABLED: "true"
+  SMS_NOTIFICATIONS_ENABLED: "true"
+  PUSH_NOTIFICATIONS_ENABLED: "true"
+  
+  # Search Configuration
+  ELASTICSEARCH_INDEX_SHARDS: "1"
+  ELASTICSEARCH_INDEX_REPLICAS: "0"
+  SEARCH_RESULTS_LIMIT: "50"
+  
+  # Development/Testing Configuration
+  TESTING: "false"
+  MOCK_EXTERNAL_SERVICES: "false"
+  SEED_DATA_ENABLED: "false"
+  
+  # Health Check Configuration
+  HEALTH_CHECK_INTERVAL: "30"
+  HEALTH_CHECK_TIMEOUT: "5"
+  
+  # Backup Configuration
+  BACKUP_ENABLED: "true"
+  BACKUP_SCHEDULE: "0 2 * * *"
+  BACKUP_RETENTION_DAYS: "30" 

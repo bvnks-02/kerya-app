@@ -1,0 +1,254 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kerya-api-gateway
+  namespace: kerya-app
+  labels:
+    app: kerya
+    component: api-gateway
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: kerya
+      component: api-gateway
+  template:
+    metadata:
+      labels:
+        app: kerya
+        component: api-gateway
+    spec:
+      containers:
+      - name: api-gateway
+        image: kerya/api-gateway:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+        env:
+        # Application Settings
+        - name: APP_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: APP_NAME
+        - name: APP_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: APP_VERSION
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: ENVIRONMENT
+        - name: DEBUG
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: DEBUG
+        
+        # API Gateway Configuration
+        - name: API_GATEWAY_HOST
+          value: "0.0.0.0"
+        - name: API_GATEWAY_PORT
+          value: "8000"
+        - name: API_GATEWAY_WORKERS
+          value: "4"
+        
+        # Security Configuration
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: kerya-secrets
+              key: JWT_SECRET_KEY
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: kerya-secrets
+              key: ENCRYPTION_KEY
+        - name: CORS_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: CORS_ORIGINS
+        - name: ALLOWED_HOSTS
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: ALLOWED_HOSTS
+        
+        # Rate Limiting
+        - name: RATE_LIMIT_REQUESTS
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: RATE_LIMIT_REQUESTS
+        - name: RATE_LIMIT_WINDOW
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: RATE_LIMIT_WINDOW
+        
+        # Logging Configuration
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: LOG_LEVEL
+        - name: LOG_FORMAT
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: LOG_FORMAT
+        - name: LOG_FILE
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: LOG_FILE
+        
+        # Monitoring Configuration
+        - name: PROMETHEUS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: PROMETHEUS_ENABLED
+        - name: PROMETHEUS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: PROMETHEUS_PORT
+        - name: JAEGER_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: JAEGER_ENABLED
+        - name: JAEGER_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: JAEGER_HOST
+        - name: JAEGER_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: JAEGER_PORT
+        
+        # Service URLs
+        - name: USER_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: USER_SERVICE_URL
+        - name: PROPERTY_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: PROPERTY_SERVICE_URL
+        - name: BOOKING_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: BOOKING_SERVICE_URL
+        - name: NOTIFICATION_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: NOTIFICATION_SERVICE_URL
+        - name: REVIEW_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: REVIEW_SERVICE_URL
+        - name: POST_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: POST_SERVICE_URL
+        
+        # Load Balancing and Circuit Breaker Settings
+        - name: LOAD_BALANCER_ALGORITHM
+          value: "round_robin"
+        - name: HEALTH_CHECK_INTERVAL
+          value: "30"
+        - name: HEALTH_CHECK_TIMEOUT
+          value: "5"
+        - name: CIRCUIT_BREAKER_THRESHOLD
+          value: "5"
+        - name: CIRCUIT_BREAKER_TIMEOUT
+          value: "60"
+        
+        # Request Timeout Settings
+        - name: REQUEST_TIMEOUT
+          value: "30"
+        - name: CONNECT_TIMEOUT
+          value: "10"
+        - name: READ_TIMEOUT
+          value: "30"
+        
+        # Retry Settings
+        - name: RETRY_ENABLED
+          value: "true"
+        - name: MAX_RETRIES
+          value: "3"
+        - name: RETRY_DELAY
+          value: "1.0"
+        - name: RETRY_BACKOFF_FACTOR
+          value: "2.0"
+        
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+        - name: cache-volume
+          mountPath: /app/cache
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: logs-volume
+        emptyDir: {}
+      - name: cache-volume
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kerya-api-gateway
+  namespace: kerya-app
+  labels:
+    app: kerya
+    component: api-gateway
+spec:
+  selector:
+    app: kerya
+    component: api-gateway
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 8000
+    protocol: TCP
+    name: https
+  type: LoadBalancer
+  externalTrafficPolicy: Local 

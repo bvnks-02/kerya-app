@@ -1,0 +1,329 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kerya-user-service
+  namespace: kerya-app
+  labels:
+    app: kerya
+    component: user-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: kerya
+      component: user-service
+  template:
+    metadata:
+      labels:
+        app: kerya
+        component: user-service
+    spec:
+      containers:
+      - name: user-service
+        image: kerya/user-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8001
+        env:
+        # Application Settings
+        - name: APP_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: APP_NAME
+        - name: APP_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: APP_VERSION
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: ENVIRONMENT
+        - name: DEBUG
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: DEBUG
+        
+        # Database Configuration
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: DATABASE_URL
+        - name: DATABASE_POOL_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: DATABASE_POOL_SIZE
+        - name: DATABASE_MAX_OVERFLOW
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: DATABASE_MAX_OVERFLOW
+        - name: DATABASE_POOL_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: DATABASE_POOL_TIMEOUT
+        
+        # Redis Configuration
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: REDIS_URL
+        - name: REDIS_DB
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: REDIS_DB
+        - name: REDIS_MAX_CONNECTIONS
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: REDIS_MAX_CONNECTIONS
+        
+        # RabbitMQ Configuration
+        - name: RABBITMQ_URL
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: RABBITMQ_URL
+        - name: RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: RABBITMQ_HOST
+        - name: RABBITMQ_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: RABBITMQ_PORT
+        - name: RABBITMQ_USER
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: RABBITMQ_USER
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: RABBITMQ_PASSWORD
+        - name: RABBITMQ_VHOST
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: RABBITMQ_VHOST
+        
+        # JWT Configuration
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: kerya-secrets
+              key: JWT_SECRET_KEY
+        - name: JWT_ALGORITHM
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: JWT_ALGORITHM
+        - name: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        - name: JWT_REFRESH_TOKEN_EXPIRE_DAYS
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: JWT_REFRESH_TOKEN_EXPIRE_DAYS
+        
+        # Security Configuration
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: kerya-secrets
+              key: ENCRYPTION_KEY
+        - name: CORS_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: CORS_ORIGINS
+        - name: ALLOWED_HOSTS
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: ALLOWED_HOSTS
+        
+        # Rate Limiting
+        - name: RATE_LIMIT_REQUESTS
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: RATE_LIMIT_REQUESTS
+        - name: RATE_LIMIT_WINDOW
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: RATE_LIMIT_WINDOW
+        
+        # Logging Configuration
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: LOG_LEVEL
+        - name: LOG_FORMAT
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: LOG_FORMAT
+        - name: LOG_FILE
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: LOG_FILE
+        
+        # Monitoring Configuration
+        - name: PROMETHEUS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: PROMETHEUS_ENABLED
+        - name: PROMETHEUS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: PROMETHEUS_PORT
+        - name: JAEGER_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: JAEGER_ENABLED
+        - name: JAEGER_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: JAEGER_HOST
+        - name: JAEGER_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: JAEGER_PORT
+        
+        # Points System Configuration
+        - name: POINTS_REGISTRATION_BONUS
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: POINTS_REGISTRATION_BONUS
+        - name: POINTS_BOOKING_EARN
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: POINTS_BOOKING_EARN
+        - name: POINTS_REVIEW_EARN
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: POINTS_REVIEW_EARN
+        - name: POINTS_POST_COST
+          valueFrom:
+            configMapKeyRef:
+              name: kerya-config
+              key: POINTS_POST_COST
+        
+        # External APIs (from secrets)
+        - name: SENDGRID_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: kerya-secrets
+              key: SENDGRID_API_KEY
+        - name: TWILIO_ACCOUNT_SID
+          valueFrom:
+            secretKeyRef:
+              name: kerya-secrets
+              key: TWILIO_ACCOUNT_SID
+        - name: TWILIO_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: kerya-secrets
+              key: TWILIO_AUTH_TOKEN
+        - name: GOOGLE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: kerya-secrets
+              key: GOOGLE_CLIENT_ID
+        - name: GOOGLE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: kerya-secrets
+              key: GOOGLE_CLIENT_SECRET
+        
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+        - name: uploads-volume
+          mountPath: /app/uploads
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8001
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: logs-volume
+        emptyDir: {}
+      - name: uploads-volume
+        persistentVolumeClaim:
+          claimName: uploads-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kerya-user-service
+  namespace: kerya-app
+  labels:
+    app: kerya
+    component: user-service
+spec:
+  selector:
+    app: kerya
+    component: user-service
+  ports:
+  - port: 8001
+    targetPort: 8001
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: uploads-pvc
+  namespace: kerya-app
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard 

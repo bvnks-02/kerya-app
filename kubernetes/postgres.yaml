@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kerya-postgres
+  namespace: kerya-app
+  labels:
+    app: kerya
+    component: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kerya
+      component: postgres
+  template:
+    metadata:
+      labels:
+        app: kerya
+        component: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "kerya_db"
+        - name: POSTGRES_USER
+          value: "kerya_user"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: kerya-secrets
+              key: DATABASE_PASSWORD
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - kerya_user
+            - -d
+            - kerya_db
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - kerya_user
+            - -d
+            - kerya_db
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+      - name: init-script
+        configMap:
+          name: postgres-init-script
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kerya-postgres
+  namespace: kerya-app
+  labels:
+    app: kerya
+    component: postgres
+spec:
+  selector:
+    app: kerya
+    component: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: kerya-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-script
+  namespace: kerya-app
+data:
+  init-db.sql: |
+    -- Create extensions
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+    
+    -- Create indexes for better performance
+    CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users (LOWER(email));
+    CREATE INDEX IF NOT EXISTS idx_users_phone_lower ON users (LOWER(phone));
+    CREATE INDEX IF NOT EXISTS idx_properties_location ON properties USING GIN (to_tsvector('english', wilaya || ' ' || address));
+    CREATE INDEX IF NOT EXISTS idx_bookings_dates_range ON bookings USING GIST (tsrange(check_in_date, check_out_date));
+    
+    -- Create functions for common operations
+    CREATE OR REPLACE FUNCTION update_updated_at_column()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        NEW.updated_at = CURRENT_TIMESTAMP;
+        RETURN NEW;
+    END;
+    $$ language 'plpgsql';
+    
+    -- Create triggers for updated_at
+    CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    
+    CREATE TRIGGER update_properties_updated_at BEFORE UPDATE ON properties
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    
+    CREATE TRIGGER update_bookings_updated_at BEFORE UPDATE ON bookings
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    
+    CREATE TRIGGER update_posts_updated_at BEFORE UPDATE ON posts
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column(); 

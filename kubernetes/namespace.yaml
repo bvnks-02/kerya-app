@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kerya-app
+  labels:
+    name: kerya-app
+    app: kerya
+    environment: production 
